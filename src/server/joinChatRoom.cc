@@ -1,17 +1,22 @@
 #include "./server.h"
 
-void joinChatRoom(const std::string chatRoomName, const int clientFd, FdToName &names, ChatroomToFdList &chatRooms) {
+void joinChatRoom(const std::string chatRoomName, const int clientFd, FdToName &names, ChatroomToFdList &chatRooms)
+{
   auto chatRoomItr = find_if(
-    chatRooms.begin(),
-    chatRooms.end(),
-    [&chatRoomName](auto const &itr) -> bool {
-      return itr.first == chatRoomName;
-    });
+      chatRooms.begin(),
+      chatRooms.end(),
+      [&chatRoomName](auto const &itr) -> bool
+      {
+        return itr.first == chatRoomName;
+      });
 
   bool exists = chatRoomItr != chatRooms.end();
-  if (!exists) {
+  if (!exists)
+  {
     chatRooms[chatRoomName] = FdList{clientFd};
-  } else {
+  }
+  else
+  {
     chatRooms[chatRoomName].insert(clientFd);
   }
 
@@ -19,9 +24,10 @@ void joinChatRoom(const std::string chatRoomName, const int clientFd, FdToName &
   send(clientFd, response.c_str(), response.size(), 0);
 
   // let members of chatroom know of new user
-  if (exists) {
+  if (exists)
+  {
     string msg = "INFO" + DELIM + names[clientFd] + DELIM +
-      "joined " + chatRoomName;
+                 "joined " + chatRoomName;
     broadcast(chatRooms.at(chatRoomName), clientFd, msg);
   }
 }

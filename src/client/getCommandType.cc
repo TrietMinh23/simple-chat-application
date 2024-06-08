@@ -11,6 +11,8 @@ cmd::Commands getCommandType(const std::string &msg)
     return HELP;
   if (msg == "/self")
     return SELF;
+  if (msg == "/all")
+    return ALL;
 
   std::vector<std::string> tokens;
   try

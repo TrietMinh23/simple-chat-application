@@ -1,16 +1,21 @@
 #include "./client.h"
 
-std::pair<std::string, std::string> getCredentials() {
+std::pair<std::string, std::string> getCredentials()
+{
   std::string name, password;
-  while (true) {
+  while (true)
+  {
     cout << "Username: ";
     cin >> name;
-    if (!name.empty()) break;
+    if (!name.empty())
+      break;
   }
-  while (true) {
+  while (true)
+  {
     cout << "Password: ";
     cin >> password;
-    if (!password.empty()) break;
+    if (!password.empty())
+      break;
   }
 
   return {name, password};

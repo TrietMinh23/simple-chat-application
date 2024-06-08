@@ -5,13 +5,15 @@
 #include "./entry/entry.h"
 
 // putting this here compiler shouts "can't put static of Keys in class"
-namespace _User {
+namespace _User
+{
   const Entry::Keys _keys = {"name", "password", "status"};
   const size_t _sz = 64;
 }
 
-class User : public Entry {
- public:
+class User : public Entry
+{
+public:
   // default constructor. use "set()" later
   User() : Entry(_User::_sz, _User::_keys) {}
 
@@ -22,4 +24,4 @@ class User : public Entry {
   explicit User(const std::string &str) : Entry(_User::_sz, str) {}
 };
 
-#endif  // SRC_DB_USER_H_
+#endif // SRC_DB_USER_H_
