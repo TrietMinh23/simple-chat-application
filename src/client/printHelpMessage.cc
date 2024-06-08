@@ -8,6 +8,9 @@ void printHelpMessage()
     cout << color::yellow << "/q"
          << color::magenta << "\n  ➜ " << color::reset
          << "quit." << endl;
+    cout << color::yellow << "/self"
+         << color::magenta << "\n  ➜ " << color::reset
+         << "get RTT time and time connect." << endl;
     cout << color::yellow << "@person YOUR MESSAGE"
          << color::magenta << "\n  ➜ " << color::reset
          << "send a private msg to <person> in current chatroom." << endl;

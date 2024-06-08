@@ -129,21 +129,6 @@ int clientChat(int sockfd, const std::string &username)
                 continue;
             }
 
-            case cmd:
-            ALL:
-            {
-                if (!allowMessages)
-                {
-                    printMessage(
-                        "ERROR" + DELIM + "JOIN" + DELIM +
-                        "You must join a chatroom first.");
-                    continue;
-                }
-                std::string request = DELIM + "LIST_PEOPLE" + DELIM + activeChatroom;
-                send(sockfd, request.c_str(), request.size(), 0);
-                continue;
-            }
-
             case cmd::INVALID:
             default:
                 printMessage("ERROR" + DELIM + "CMD" + DELIM + "Invalid command.");
