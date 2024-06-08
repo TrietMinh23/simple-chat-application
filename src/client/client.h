@@ -17,15 +17,20 @@
 #include <vector>
 #include <set>
 #include <chrono>
+#include <ctime>
 
 const std::string ALT_SCREEN_ON("\033[2J\033[1;1H");
 const std::string ALT_SCREEN_OFF("\033[2J\033[?47l\0338");
 
-using std::cout; using std::cin; using std::endl;
+using std::cin;
+using std::cout;
+using std::endl;
 using StrPair = std::pair<std::string, std::string>;
 
-namespace cmd {
-  enum Commands {
+namespace cmd
+{
+  enum Commands
+  {
     NOT_CMD,
     INVALID,
     QUIT,
@@ -42,7 +47,7 @@ namespace cmd {
 int Socket();
 int Connect(int sockfd, const std::string &host, int port);
 StrPair getCredentials();
-bool login(const int sockfd, const StrPair& credentials);
+bool login(const int sockfd, const StrPair &credentials);
 int clientChat(int sockfd, const std::string &username);
 void msgPrompt(const std::string &name, const std::string &chatroom);
 void printMessage(const std::string &msg);
@@ -50,7 +55,8 @@ void printHelpMessage();
 
 cmd::Commands getCommandType(const std::string &);
 
-namespace color {
+namespace color
+{
   const std::string red("\033[0;31m");
   const std::string green("\033[1;32m");
   const std::string yellow("\033[1;33m");
@@ -64,4 +70,4 @@ std::vector<std::string> split(const std::string &str, const std::string &delim,
 const int BUFFER_SIZE = 1024;
 const std::string DELIM("$$$");
 
-#endif  // SRC_CLIENT_CLIENT_H_
+#endif // SRC_CLIENT_CLIENT_H_
