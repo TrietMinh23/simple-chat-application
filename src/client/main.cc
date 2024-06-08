@@ -6,6 +6,16 @@ int main(int argc, char *argv[]) {
   const int port = (argc > 2) ? std::atoi(argv[2]) : 8000;
   StrPair credentials = getCredentials();
 
+  try {
+    const int sockfd = Socket();
+    Connect(sockfd, host, port);
+    login(sockfd, credentials);
+    clientChat(sockfd, credentials.first);
+    close(sockfd);
+  } catch (std::exception &e) {
+    cout << color::red << "ERROR: " << e.what() << color::reset << endl;
+    return errno;
+  }
   cout << ALT_SCREEN_OFF;
   return 0;
 }
