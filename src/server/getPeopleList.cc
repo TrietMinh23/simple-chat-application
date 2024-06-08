@@ -14,5 +14,5 @@ std::string getPeopleList(
       response += "\n" + names.at(fd) + " <" + getPeerName(fd) + ">";
     }
   }
-  return response;
+  return response;F
 }
