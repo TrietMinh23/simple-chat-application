@@ -5,6 +5,7 @@ cmd::Commands getCommandType(const std::string &msg) {
   if (msg[0] != '/') return NOT_CMD;
   if (msg == "/q") return QUIT;
   if (msg == "/help") return HELP;
+  if (msg == "/self") return SELF;
 
   std::vector<std::string> tokens;
   try {

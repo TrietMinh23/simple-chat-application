@@ -9,6 +9,7 @@ cmd::Commands getMessageType(const std::string &msg) {
   if (cmd.find("LEAVE") == 0) return LEAVE;
   if (cmd.find("LIST_CHATROOMS") == 0) return LIST_CHATROOMS;
   if (cmd.find("LIST_PEOPLE") == 0) return LIST_PEOPLE;
+  if (cmd.find("SELF") == 0) return SELF;
 
   return INVALID;
 }

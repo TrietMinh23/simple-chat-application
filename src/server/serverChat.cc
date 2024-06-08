@@ -91,6 +91,15 @@ int serverChat(int sockfd) {
           continue;
         }
 
+        case cmd::SELF:
+        {
+          std::string response = DELIM + "SELF_RESPONSE";
+          send(currentClientFd, response.c_str(), response.size(), 0);
+          cout << color::cyan << "[SERVER:SELF] " << color::reset
+               << "Responded to client's SELF request" << endl;
+          continue;
+        }
+
         case cmd::INVALID:
         default: continue;
       }

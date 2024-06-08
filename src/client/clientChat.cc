@@ -7,6 +7,9 @@ int clientChat(int sockfd, const std::string &username) {
   std::string activeChatroom;
   std::set<std::string> activeChatrooms;
   bool allowMessages = false;
+  bool waitingForSelfResponse = false;
+  // auto start_time = std::chrono::steady_clock::now();
+  std::chrono::steady_clock::time_point send_time;
 
   while (true) {
     msgPrompt(username, activeChatroom);
@@ -94,6 +97,17 @@ int clientChat(int sockfd, const std::string &username) {
           continue;
         }
 
+        case cmd::SELF:
+        {
+          std::string request = DELIM + "SELF";
+          send_time = std::chrono::steady_clock::now();
+          auto send_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(send_time.time_since_epoch()).count();
+          cout << "Send time: " << send_time_ms << " ms since epoch\n";
+          send(sockfd, request.c_str(), request.size(), 0);
+          waitingForSelfResponse = true;
+          continue;
+        }
+
         case cmd::INVALID:
         default:
           printMessage("ERROR" + DELIM + "CMD" + DELIM + "Invalid command.");
@@ -106,7 +120,22 @@ int clientChat(int sockfd, const std::string &username) {
         cout << "Server unavailable\n";
         return 0;
       }
+
+      auto receive_time = std::chrono::steady_clock::now();
+      auto receive_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(receive_time.time_since_epoch()).count();
+      cout << "Receive time: " << receive_time_ms << " ms since epoch\n";
+
       std::string receivedMsg(buffer);
+
+      if (waitingForSelfResponse && receivedMsg == (DELIM + "SELF_RESPONSE"))
+      {
+        waitingForSelfResponse = false; // Hủy cờ chờ phản hồi từ SELF
+        auto round_trip_time = std::chrono::duration_cast<std::chrono::milliseconds>(receive_time - send_time).count();
+        auto connection_time = round_trip_time / 2; // Thời gian kết nối
+        cout << "Round-trip time: " << round_trip_time << " ms. Connection time: " << connection_time << " ms.\n";
+        continue;
+      }
+
       if (receivedMsg.find(DELIM) == 0) {
         // process response of request
         auto tokens = split(receivedMsg, DELIM, 2);

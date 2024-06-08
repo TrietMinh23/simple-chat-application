@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <chrono>
 
 const std::string ALT_SCREEN_ON("\033[2J\033[1;1H");
 const std::string ALT_SCREEN_OFF("\033[2J\033[?47l\0338");
