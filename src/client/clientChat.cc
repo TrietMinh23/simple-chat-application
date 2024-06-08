@@ -9,7 +9,6 @@ int clientChat(int sockfd, const std::string &username)
     std::set<std::string> activeChatrooms;
     bool allowMessages = false;
     bool waitingForSelfResponse = false;
-    auto start_time = std::chrono::steady_clock::now();
     struct timespec send_time, receive_time;
 
     while (true)
