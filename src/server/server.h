@@ -32,7 +32,9 @@ namespace cmd {
     JOIN,
     LEAVE,
     LIST_CHATROOMS,
-    LIST_PEOPLE
+    LIST_PEOPLE,
+    SELF,
+    ALL
   };
 }
 
