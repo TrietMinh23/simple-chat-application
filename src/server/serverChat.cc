@@ -99,12 +99,15 @@ void serverChat(int sockfd)
             }
             break;
         }
-        else if (bytesRead > 0)
-        {
-            std::cout << "Received: " << std::string(buffer, bytesRead) << std::endl;
-        }
 
         std::string msg(buffer, bytesRead);
+        std::cout << "Received: " << msg << std::endl;
+
+        // Optionally, echo the message back to the client or handle commands
+        std::string response = "Server: Received message: " + msg;
+        send(sockfd, response.c_str(), msg.size(), 0);
+
+        // std::string msg(buffer, bytesRead);
         std::istringstream iss(msg);
         std::string command, param;
         iss >> command;
