@@ -1,25 +1,21 @@
-#include "./client.h"
+#include "client.h"
 
 int main(int argc, char *argv[])
 {
-    cout << ALT_SCREEN_ON;
-    const std::string host = (argc > 1) ? argv[1] : "127.0.0.1";
-    const int port = (argc > 2) ? std::atoi(argv[2]) : 8080;
-    StrPair credentials = getCredentials();
+    std::string host = (argc > 1) ? argv[1] : "127.0.0.1";
+    int port = (argc > 2) ? std::atoi(argv[2]) : 8080;
 
     try
     {
-        const int sockfd = Socket();
+        int sockfd = Socket();
         Connect(sockfd, host, port);
-        login(sockfd, credentials);
-        clientChat(sockfd, credentials.first);
+        clientChat(sockfd);
         close(sockfd);
     }
-    catch (std::exception &e)
+    catch (const std::exception &e)
     {
-        cout << color::red << "ERROR: " << e.what() << color::reset << endl;
-        return errno;
+        std::cerr << "Exception: " << e.what() << std::endl;
+        return 1;
     }
-    cout << ALT_SCREEN_OFF;
     return 0;
 }
