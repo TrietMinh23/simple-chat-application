@@ -119,13 +119,7 @@ void leaveChatRoom(
 // handle lost connection request
 // - Remove connection from active connections
 // - Notify chatroom mates.
-void handleLostConnection(
-    const int currentClientFd,
-    ChatroomToFdList &chatRooms,
-    FdToName &clients,
-    fd_set &master,
-    Database<User> &db);
-
+void handleLostConnection(const int currentClientFd, ChatroomToFdList &chatRooms, FdToName &clients, Database<User> &db);
 // handle incomming msg :
 //  if private send it to the particular client else broadcast it to chatroom.
 void handleMsg(
@@ -133,6 +127,8 @@ void handleMsg(
     const ChatroomToFdList &chatRooms,
     const FdToName &clients,
     string msg);
+
+void handleClient(int clientSocket, Database<User> &db);
 
 // get the `ip:port` for a given client
 std::string getPeerName(const int sockfd);
