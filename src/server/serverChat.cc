@@ -1,126 +1,152 @@
-#include "./server.h"
+#include "server.h"
+#include <sstream>
+#include <unordered_map>
+#include <set>
+#include <mutex>
+#include <chrono>
 
-int serverChat(int sockfd)
+std::unordered_map<std::string, std::set<int>> chatRooms;
+std::unordered_map<int, std::chrono::steady_clock::time_point> clientConnectionTimes;
+std::mutex chatRoomsMutex;
+
+void broadcastMessage(int senderSockfd, const std::string &roomName, const std::string &message)
 {
-	Database<User> db("./data/users/", "name");
-	int maxfd = sockfd;
-	char buffer[BUFFER_SIZE];
-	FdToName clients;
-	ChatroomToFdList chatRooms;
-	fd_set master;
+    std::lock_guard<std::mutex> lock(chatRoomsMutex);
+    if (chatRooms.find(roomName) != chatRooms.end())
+    {
+        for (int fd : chatRooms[roomName])
+        {
+            if (fd != senderSockfd)
+            {
+                send(fd, message.c_str(), message.length(), 0);
+            }
+        }
+    }
+}
 
-	while (true)
-	{
-		FD_ZERO(&master);
-		FD_SET(sockfd, &master);
-		for (auto &p : clients)
-		{
-			FD_SET(p.first, &master);
-			if (p.first > maxfd)
-				maxfd = p.first;
-		}
-		select(maxfd + 1, &master, NULL, NULL, NULL);
+void handleJoin(int sockfd, const std::string &roomName)
+{
+    std::lock_guard<std::mutex> lock(chatRoomsMutex);
+    chatRooms[roomName].insert(sockfd);
+    clientConnectionTimes[sockfd] = std::chrono::steady_clock::now(); // Start time for connection
+    std::string joinMsg = "Server: User has joined the room.\n";
+    broadcastMessage(sockfd, roomName, joinMsg);
+}
 
-		if (FD_ISSET(sockfd, &master))
-		{
-			const int newClient = Accept(sockfd);
-			if (newClient < 0)
-			{
-				cout << color::red << "[CONNECTION:ERROR] " << color::reset
-					 << "Cannot Accept from newClient = " << newClient << endl;
-				continue;
-			}
-			cout << color::yellow << "[CONNECTION:INFO] " << color::reset
-				 << "New client joined from <" << getPeerName(newClient) << ">" << endl;
-			FD_SET(newClient, &master);
-			clients[newClient] = "";
-			continue;
-		}
+void handleLeave(int sockfd, const std::string &roomName)
+{
+    std::lock_guard<std::mutex> lock(chatRoomsMutex);
+    if (chatRooms.find(roomName) != chatRooms.end())
+    {
+        chatRooms[roomName].erase(sockfd);
+        if (chatRooms[roomName].empty())
+        {
+            chatRooms.erase(roomName);
+        }
+        auto endTime = std::chrono::steady_clock::now();
+        auto startTime = clientConnectionTimes[sockfd];
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+        std::string leaveMsg = "Server: User has left the room. Connection time: " + std::to_string(duration) + " seconds.\n";
+        broadcastMessage(sockfd, roomName, leaveMsg);
+        clientConnectionTimes.erase(sockfd); // Remove the start time record
+    }
+}
 
-		for (auto &p : clients)
-		{
-			const int currentClientFd = p.first;
-			if (!FD_ISSET(currentClientFd, &master))
-				continue;
+void handleUptime(int sockfd)
+{
+    std::lock_guard<std::mutex> lock(chatRoomsMutex);
+    auto currentTime = std::chrono::steady_clock::now();
+    for (const auto &pair : clientConnectionTimes)
+    {
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(currentTime - pair.second).count();
+        std::string uptimeMsg = "Client " + std::to_string(pair.first) + " has been connected for " + std::to_string(duration) + " seconds.\n";
+        send(sockfd, uptimeMsg.c_str(), uptimeMsg.length(), 0);
+    }
+}
 
-			std::fill_n(buffer, BUFFER_SIZE, '\0');
-			const int bytesRead = recv(currentClientFd, buffer, sizeof(buffer), 0);
+void handleListChatrooms(int sockfd)
+{
+    std::string response = "Available Chat Rooms:\n";
+    std::lock_guard<std::mutex> lock(chatRoomsMutex);
+    for (auto &room : chatRooms)
+    {
+        response += room.first + " (" + std::to_string(room.second.size()) + " participants)\n";
+    }
+    send(sockfd, response.c_str(), response.length(), 0);
+}
 
-			bool connectionLost = (bytesRead <= 0);
-			if (connectionLost)
-			{
-				handleLostConnection(currentClientFd, chatRooms, clients, master, db);
-				continue;
-			}
+void handleMessage(int sockfd, const std::string &roomName, const std::string &message)
+{
+    std::string formattedMessage = "Message: " + message + "\n";
+    broadcastMessage(sockfd, roomName, formattedMessage);
+}
 
-			if (clients[currentClientFd].empty())
-			{
-				addClient(currentClientFd, &master, string(buffer), db, clients);
-				continue;
-			}
+void serverChat(int sockfd)
+{
+    char buffer[BUFFER_SIZE];
+    std::string currentRoom;
 
-			// process messages
-			string msg(buffer);
-			auto type = getMessageType(msg);
-			if (type == cmd::NOT_CMD)
-			{
-				handleMsg(currentClientFd, chatRooms, clients, msg);
-				continue;
-			}
+    while (true)
+    {
+        memset(buffer, 0, BUFFER_SIZE);
+        ssize_t bytesRead = recv(sockfd, buffer, BUFFER_SIZE, 0);
+        if (bytesRead <= 0)
+        {
+            std::cout << "Client disconnected or error occurred" << std::endl;
+            if (!currentRoom.empty())
+            {
+                handleLeave(sockfd, currentRoom);
+            }
+            break;
+        }
 
-			switch (type)
-			{
-			case cmd::JOIN:
-			{
-				auto chatRoomName = split(msg, DELIM, 2)[1];
-				cout << color::green << "[CLIENT:JOIN] " << color::reset
-					 << "<" << clients[currentClientFd] << "> requested to join #"
-					 << chatRoomName << endl;
-				joinChatRoom(chatRoomName, currentClientFd, clients, chatRooms);
-				continue;
-			}
+        std::string msg(buffer, bytesRead);
+        std::cout << "Received: " << msg << std::endl;
 
-			case cmd::LEAVE:
-			{
-				auto chatRoomName = split(msg, DELIM, 2)[1];
-				cout << color::green << "[CLIENT:LEAVE] " << color::reset
-					 << "<" << clients[currentClientFd] << "> left #"
-					 << chatRoomName << endl;
-				leaveChatRoom(chatRoomName, currentClientFd, clients, chatRooms);
-				continue;
-			}
+        // Optionally, echo the message back to the client or handle commands
+        std::string response = "Server: Received message: " + msg;
+        send(sockfd, response.c_str(), msg.size(), 0);
 
-			case cmd::LIST_CHATROOMS:
-			{
-				auto response = getChatroomsList(chatRooms);
-				send(currentClientFd, response.c_str(), response.size(), 0);
-				continue;
-			}
+        // std::string msg(buffer, bytesRead);
+        std::istringstream iss(msg);
+        std::string command, param;
+        iss >> command;
 
-			case cmd::LIST_PEOPLE:
-			{
-				auto chatRoomName = split(msg, DELIM, 2)[1];
-				auto lst = getPeopleList(chatRoomName, clients, chatRooms);
-				auto response = "INFO" + DELIM +
-								"PEOPLE#" + chatRoomName + DELIM + lst;
-				send(currentClientFd, response.c_str(), response.size(), 0);
-				continue;
-			}
+        std::cout << "Command: " << command << std::endl;
 
-			case cmd::SELF:
-			{
-				std::string response = DELIM + "SELF_RESPONSE";
-				send(currentClientFd, response.c_str(), response.size(), 0);
-				cout << color::cyan << "[SERVER:SELF] " << color::reset
-					 << "Responded to client's SELF request" << endl;
-				continue;
-			}
 
-			case cmd::INVALID:
-			default:
-				continue;
-			}
-		} // end:range-for-clients
-	} // end:while
-	return 0;
+        if (command == "/join")
+        {
+            iss >> param;
+            if (!currentRoom.empty())
+            {
+                handleLeave(sockfd, currentRoom);
+            }
+            currentRoom = param;
+            handleJoin(sockfd, currentRoom);
+        }
+        else if (command == "/leave")
+        {
+            if (!currentRoom.empty())
+            {
+                handleLeave(sockfd, currentRoom);
+                currentRoom.clear();
+            }
+        }
+        else if (command == "/list")
+        {
+            handleListChatrooms(sockfd);
+        }
+        else if (command == "/uptime")
+        {
+            handleUptime(sockfd);
+        }
+        else
+        {
+            if (!currentRoom.empty())
+            {
+                handleMessage(sockfd, currentRoom, msg);
+            }
+        }
+    }
 }
